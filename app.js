@@ -51,15 +51,29 @@ const upload = multer({ storage });
 // Get Route 
 // Loads Form
 app.get('/', (req, res) => {
-    res.render('index') //ejs looks in folder: views
+    gfs.files.find().toArray((err, files) => {
+
+        if (!files || files.length === 0) {
+            res.render('index', { files: false })
+        } else {
+            files.map(file => {
+                if (file.contentType === 'image/jpeg' || file.contentType === 'image/png') {
+                    file.isImage = true
+                } else {
+                    file.isImage = false
+                }
+            })
+            res.render('index', { files: files })
+        }
+    })
 })
 
 // Get/Files
-// get all file info as json
-app.get('/files', (req, res) =>{
-    gfs.files.find().toArray((err, files) =>{
+// get all file info as json objects array
+app.get('/files', (req, res) => {
+    gfs.files.find().toArray((err, files) => {
 
-        if(!files || files.length === 0){
+        if (!files || files.length === 0) {
             return res.status(404).json({
                 err: 'No Files Exist'
             })
@@ -72,8 +86,8 @@ app.get('/files', (req, res) =>{
 // Get /files/:filename
 // display ONE file object
 app.get('/files/:filename', (req, res) => {
-    gfs.files.findOne({filename: req.params.filename}, (err, file) => {
-        if(!file || file.length === 0){
+    gfs.files.findOne({ filename: req.params.filename }, (err, file) => {
+        if (!file || file.length === 0) {
             return res.status(404).json({
                 err: 'no such file'
             })
@@ -86,14 +100,14 @@ app.get('/files/:filename', (req, res) => {
 // Get /image/:filename
 // display image
 app.get('/image/:filename', (req, res) => {
-    gfs.files.findOne({filename: req.params.filename}, (err, file) => {
-        if(!file || file.length === 0){
+    gfs.files.findOne({ filename: req.params.filename }, (err, file) => {
+        if (!file || file.length === 0) {
             return res.status(404).json({
                 err: 'no such file'
             })
         }
         //Check if image
-        if(file.contentType === 'image/jpeg' || file.contentType === 'image/png'){
+        if (file.contentType === 'image/jpeg' || file.contentType === 'image/png') {
 
             const readstream = gfs.createReadStream(file.filename)
             readstream.pipe(res)
@@ -108,7 +122,18 @@ app.get('/image/:filename', (req, res) => {
 // Post Route
 // uploads file to db
 app.post('/upload', upload.single('file'), (req, res) => {  //'file': name of input in form
-    res.json({file: req.file})
+    res.json({ file: req.file })
+})
+
+//Delete Route /files/:id
+//delete files
+app.delete('/files/:id', (req, res)=>{
+    gfs.remove({_id: req.params.id, root: 'uploads'}, (err, gridStore) =>{
+        if(err){
+            return res.status(404).json({ err: err})
+        }
+        res.redirect('/')
+    })
 })
 
 const port = 5000
